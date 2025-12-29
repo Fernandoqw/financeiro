@@ -1,0 +1,12 @@
+{
+  "background_color": "#000000",
+  "dir": "ltr",
+  "display": "standalone",
+  "name": "Controle de Gastos",
+  "orientation": "any",
+  "scope": "/",
+  "short_name": "Controle",
+  "start_url": "controlegastos-zeta.vercel.app",
+  "theme_color": "#000000",
+  "description": "Controle de Gastos"
+}
