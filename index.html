@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controle de Gastos</title>
+    
+    <!-- 1. Carregando React e ReactDOM (Versões Fixas e Estáveis) -->
+    <script crossorigin src="https://unpkg.com/react@18.2.0/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
+    
+    <!-- 2. Carregando Babel -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- 3. Carregando Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <style>
+        body { background-color: #f8fafc; font-family: sans-serif; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        // Obtendo as ferramentas do React
+        const { useState, useEffect } = React;
+
+        // --- ÍCONES EMBUTIDOS (Para evitar erros de carregamento externo) ---
+        // Definimos componentes simples de SVG para cada ícone usado.
+        
+        const IconBase = ({ children, className }) => (
+            <svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                width="24" height="24" 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                stroke="currentColor" 
+                strokeWidth="2" 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                className={className}
+            >
+                {children}
+            </svg>
+        );
+
+        const Plus = (props) => <IconBase {...props}><path d="M5 12h14"/><path d="M12 5v14"/></IconBase>;
+        const Trash2 = (props) => <IconBase {...props}><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></IconBase>;
+        const Wallet = (props) => <IconBase {...props}><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></IconBase>;
+        const Search = (props) => <IconBase {...props}><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></IconBase>;
+        const LayoutDashboard = (props) => <IconBase {...props}><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></IconBase>;
+        const TrendingDown = (props) => <IconBase {...props}><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></IconBase>;
+        const DollarSign = (props) => <IconBase {...props}><line x1="12" x2="12" y1="2" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></IconBase>;
+        const PiggyBank = (props) => <IconBase {...props}><path d="M19 5c-1.5 0-2.8.6-3.8 1.5l-2.5 2.5"/><path d="M2 20h20"/><path d="M5 18v3"/><path d="M19 18v3"/><path d="M4 15h12.4a2 2 0 0 1 1.6.8l3.1 3.5H3.6l-2-2.3a2 2 0 0 1 .4-2.7l3-1.8Z"/><path d="M16 11h.01"/><path d="M13.6 7.6c.7-.9.5-2.2-.4-2.8-1-.7-2.3-.5-2.8.4-.7.9-.5 2.2.4 2.8.9.7 2.3.5 2.8-.4Z"/></IconBase>;
+        const ChevronLeft = (props) => <IconBase {...props}><path d="m15 18-6-6 6-6"/></IconBase>;
+        const ChevronRight = (props) => <IconBase {...props}><path d="m9 18 6-6-6-6"/></IconBase>;
+        const History = (props) => <IconBase {...props}><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 12"/><path d="M3 3v9h9"/><path d="M12 7v5l4 2"/></IconBase>;
+        const CalendarDays = (props) => <IconBase {...props}><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/><path d="M16 18h.01"/></IconBase>;
+        const ChevronDown = (props) => <IconBase {...props}><path d="m6 9 6 6 6-6"/></IconBase>;
+
+        // --- CÓDIGO DO APLICATIVO ---
+
+        const initialData = [
+            { id: 1, description: "Aluguel Apartamento", category: "Moradia", type: "Fixo", amount: 2500.00, month: "2025-01" },
+            { id: 2, description: "Supermercado Semanal", category: "Alimentação", type: "Variável", amount: 850.50, month: "2025-01" },
+            { id: 3, description: "Notebook Novo", category: "Eletrônicos", type: "Parcelado", amount: 350.00, month: "2025-01", currentInstallment: 1, installments: 10 },
+            { id: 4, description: "Internet Fibra", category: "Contas", type: "Fixo", amount: 120.00, month: "2025-01" },
+        ];
+
+        const categories = ["Moradia", "Alimentação", "Transporte", "Saúde", "Educação", "Lazer", "Contas", "Eletrônicos", "Outros"];
+        const types = ["Fixo", "Variável", "Parcelado"];
+        const START_MONTH = "2025-01"; 
+
+        function App() {
+            const [currentMonth, setCurrentMonth] = useState(START_MONTH);
+            const [expenses, setExpenses] = useState(initialData);
+            const [searchTerm, setSearchTerm] = useState("");
+            
+            const [salaries, setSalaries] = useState({
+                "2025-01": 5000.00,
+            });
+
+            const getTypeStyles = (type) => {
+                switch (type) {
+                case "Fixo": return "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100";
+                case "Variável": return "bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100";
+                case "Parcelado": return "bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100";
+                default: return "bg-slate-50 text-slate-700 border-slate-200";
+                }
+            };
+
+            const checkAndCopyRecurringExpenses = (targetMonth) => {
+                if (targetMonth === START_MONTH) return;
+
+                const [year, month] = targetMonth.split('-').map(Number);
+                const prevDate = new Date(year, month - 2); 
+                const prevMonthStr = prevDate.toISOString().slice(0, 7);
+
+                if (prevMonthStr < START_MONTH) return;
+
+                const prevRecurringExpenses = expenses.filter(e => 
+                e.month === prevMonthStr && (e.type === "Fixo" || e.type === "Parcelado")
+                );
+                
+                const targetMonthExpenses = expenses.filter(e => e.month === targetMonth);
+                const newExpenses = [];
+
+                prevRecurringExpenses.forEach(prevExp => {
+                const alreadyExists = targetMonthExpenses.some(
+                    t => t.description === prevExp.description && t.category === prevExp.category
+                );
+
+                if (!alreadyExists) {
+                    if (prevExp.type === "Parcelado") {
+                    if (prevExp.currentInstallment < prevExp.installments) {
+                        newExpenses.push({
+                        ...prevExp,
+                        id: Date.now() + Math.random(),
+                        month: targetMonth,
+                        currentInstallment: prevExp.currentInstallment + 1,
+                        });
+                    }
+                    } 
+                    else {
+                    newExpenses.push({
+                        ...prevExp,
+                        id: Date.now() + Math.random(),
+                        month: targetMonth,
+                    });
+                    }
+                }
+                });
+
+                if (newExpenses.length > 0) {
+                setExpenses(prev => [...prev, ...newExpenses]);
+                }
+
+                setSalaries(prev => {
+                if (prev[targetMonth] === undefined) {
+                    return { ...prev, [targetMonth]: prev[prevMonthStr] || 0 };
+                }
+                return prev;
+                });
+            };
+
+            useEffect(() => {
+                checkAndCopyRecurringExpenses(currentMonth);
+            }, [currentMonth]);
+
+            const handleMonthChange = (direction) => {
+                const [year, month] = currentMonth.split('-').map(Number);
+                const date = new Date(year, month - 1 + direction);
+                const newMonthStr = date.toISOString().slice(0, 7);
+                
+                if (newMonthStr < START_MONTH) return;
+                
+                setCurrentMonth(newMonthStr);
+            };
+
+            const handleDateInput = (e) => {
+                const val = e.target.value;
+                if (val && val >= START_MONTH) setCurrentMonth(val);
+                else if (val && val < START_MONTH) setCurrentMonth(START_MONTH);
+            };
+
+            const formatMonthDisplay = (monthStr) => {
+                if (!monthStr) return "";
+                const [year, month] = monthStr.split('-');
+                const date = new Date(year, month - 1);
+                const monthName = date.toLocaleString('pt-BR', { month: 'long' });
+                return `${monthName.charAt(0).toUpperCase() + monthName.slice(1)} de ${year}`;
+            };
+
+            const calculatePreviousBalance = () => {
+                const allMonths = new Set([...Object.keys(salaries), ...expenses.map(e => e.month)]);
+                const validMonths = Array.from(allMonths).filter(m => m >= START_MONTH).sort();
+                
+                let accumulated = 0;
+
+                for (const m of validMonths) {
+                if (m >= currentMonth) break; 
+                const monthSalary = salaries[m] || 0;
+                const monthExpenses = expenses
+                    .filter(e => e.month === m)
+                    .reduce((acc, curr) => acc + Number(curr.amount), 0);
+                accumulated += (monthSalary - monthExpenses);
+                }
+                return accumulated;
+            };
+
+            const previousBalance = calculatePreviousBalance();
+            const currentMonthSalary = salaries[currentMonth] || 0;
+            const currentMonthExpensesList = expenses.filter(e => e.month === currentMonth);
+            
+            const currentTotalExpenses = currentMonthExpensesList.reduce((acc, curr) => acc + Number(curr.amount), 0);
+            const currentFixedExpenses = currentMonthExpensesList.filter(e => e.type === "Fixo").reduce((acc, curr) => acc + Number(curr.amount), 0);
+            const currentVariableExpenses = currentMonthExpensesList.filter(e => e.type === "Variável").reduce((acc, curr) => acc + Number(curr.amount), 0);
+            const currentInstallmentExpenses = currentMonthExpensesList.filter(e => e.type === "Parcelado").reduce((acc, curr) => acc + Number(curr.amount), 0);
+
+            const finalBalance = previousBalance + currentMonthSalary - currentTotalExpenses;
+            const formatCurrency = (value) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+
+            const handleAddExpense = () => {
+                const newExpense = {
+                id: Date.now(),
+                description: "Nova Despesa",
+                category: "Outros",
+                type: "Variável",
+                amount: 0.00,
+                month: currentMonth
+                };
+                setExpenses([...expenses, newExpense]);
+            };
+
+            const handleDeleteExpense = (id) => {
+                setExpenses(expenses.filter(e => e.id !== id));
+            };
+
+            const handleUpdateExpense = (id, field, value) => {
+                setExpenses(expenses.map(e => {
+                if (e.id === id) {
+                    return { ...e, [field]: value };
+                }
+                return e;
+                }));
+            };
+
+            const handleSalaryChange = (val) => {
+                setSalaries(prev => ({ ...prev, [currentMonth]: Number(val) }));
+            };
+
+            const filteredExpenses = currentMonthExpensesList.filter(e => 
+                e.description.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                e.category.toLowerCase().includes(searchTerm.toLowerCase())
+            );
+
+            const isStartMonth = currentMonth === START_MONTH;
+
+            return (
+                <div className="min-h-screen bg-slate-50 p-3 md:p-8 font-sans text-slate-800">
+                
+                <div className="max-w-7xl mx-auto mb-6 md:mb-8">
+                    <header className="mb-6 md:mb-8 flex flex-col md:flex-row justify-between items-center gap-4 md:gap-6">
+                    <div className="text-center md:text-left w-full md:w-auto">
+                        <h1 className="text-2xl md:text-3xl font-bold text-slate-900 flex items-center justify-center md:justify-start gap-3">
+                        <div className="bg-emerald-100 p-2 rounded-lg">
+                            <Wallet className="w-6 h-6 md:w-8 md:h-8 text-emerald-600" />
+                        </div>
+                        Controle de Gastos
+                        </h1>
+                        <p className="text-slate-500 mt-2 ml-1 text-sm md:text-base hidden md:block">Gerencie suas finanças com clareza.</p>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-3 bg-white p-2 rounded-2xl shadow-sm border border-slate-200 w-full md:w-auto">
+                        <button 
+                        onClick={() => handleMonthChange(-1)} 
+                        disabled={isStartMonth}
+                        className={`p-2 md:p-3 rounded-xl transition-all ${
+                            isStartMonth 
+                            ? 'text-slate-300 cursor-not-allowed' 
+                            : 'hover:bg-slate-100 text-slate-500 hover:text-emerald-600 active:scale-95'
+                        }`}
+                        >
+                        <ChevronLeft className="w-5 h-5" />
+                        </button>
+                        
+                        <div className="relative group flex-1 md:flex-none flex justify-center">
+                        <div className="flex items-center justify-center gap-2 md:gap-3 px-2 md:px-6 py-2.5 rounded-xl bg-slate-50 group-hover:bg-emerald-50 transition-all cursor-pointer border border-transparent group-hover:border-emerald-100 w-full md:min-w-[220px]">
+                            <CalendarDays className="w-4 h-4 md:w-5 md:h-5 text-emerald-500 group-hover:text-emerald-600 transition-colors" />
+                            <span className="text-sm md:text-lg font-bold text-slate-700 group-hover:text-emerald-800 transition-colors select-none truncate">
+                            {formatMonthDisplay(currentMonth)}
+                            </span>
+                        </div>
+                        <input 
+                            type="month" 
+                            min={START_MONTH}
+                            value={currentMonth}
+                            onChange={handleDateInput}
+                            className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
+                        />
+                        </div>
+
+                        <button 
+                        onClick={() => handleMonthChange(1)} 
+                        className="p-2 md:p-3 hover:bg-slate-100 rounded-xl transition-all text-slate-500 hover:text-emerald-600 active:scale-95"
+                        >
+                        <ChevronRight className="w-5 h-5" />
+                        </button>
+                    </div>
+                    </header>
+
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-3 md:gap-4">
+                    <StatCard 
+                        title="Saldo Anterior" 
+                        value={formatCurrency(previousBalance)} 
+                        icon={<History className="w-5 h-5 text-purple-600" />} 
+                        color="border-l-4 border-purple-500"
+                        textColor={previousBalance >= 0 ? 'text-slate-800' : 'text-red-500'}
+                    />
+
+                    <div className="bg-white p-5 md:p-6 rounded-xl shadow-sm border border-slate-200 flex items-start justify-between border-l-4 border-blue-500 transition-transform hover:-translate-y-1 duration-300">
+                        <div className="w-full">
+                        <p className="text-slate-500 text-xs md:text-sm font-medium mb-1">Entradas (Salário)</p>
+                        <div className="flex items-center gap-1">
+                            <span className="text-slate-400 text-lg font-normal">R$</span>
+                            <input 
+                            type="number" 
+                            value={currentMonthSalary} 
+                            onChange={(e) => handleSalaryChange(e.target.value)}
+                            className="w-full bg-transparent border-b border-transparent hover:border-slate-200 focus:border-blue-500 focus:outline-none text-xl md:text-2xl font-bold text-slate-800 tracking-tight transition-colors"
+                            />
+                        </div>
+                        </div>
+                        <div className="p-2 md:p-3 bg-blue-50 rounded-lg shrink-0 ml-2">
+                        <DollarSign className="w-5 h-5 md:w-6 md:h-6 text-blue-600" />
+                        </div>
+                    </div>
+
+                    <StatCard 
+                        title="Total Gastos (Mês)" 
+                        value={formatCurrency(currentTotalExpenses)}
+                        subtext={
+                        <div className="flex flex-col gap-0.5 mt-1">
+                            <span>Fixos: {formatCurrency(currentFixedExpenses)}</span>
+                            <span>Variáveis: {formatCurrency(currentVariableExpenses)}</span>
+                            <span>Parcelados: {formatCurrency(currentInstallmentExpenses)}</span>
+                        </div>
+                        }
+                        icon={<LayoutDashboard className="w-5 h-5 text-indigo-600" />} 
+                        color="border-l-4 border-indigo-500"
+                    />
+
+                    <StatCard 
+                        title="Saldo Final Acumulado" 
+                        value={formatCurrency(finalBalance)} 
+                        icon={<PiggyBank className="w-5 h-5 text-emerald-600" />} 
+                        color="border-l-4 border-emerald-500"
+                        textColor={finalBalance >= 0 ? 'text-emerald-700' : 'text-red-600'}
+                        highlight={true}
+                    />
+                    </div>
+                </div>
+
+                <div className="max-w-7xl mx-auto bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    
+                    <div className="p-4 border-b border-slate-100 flex flex-col md:flex-row gap-4 justify-between items-center bg-white">
+                    <div className="flex gap-2 w-full md:w-auto">
+                        <button 
+                        onClick={handleAddExpense}
+                        className="flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white px-4 py-3 md:py-2.5 rounded-lg font-medium transition-colors w-full md:w-auto shadow-sm shadow-emerald-200"
+                        >
+                        <Plus className="w-5 h-5 md:w-4 md:h-4" /> Nova Despesa
+                        </button>
+                    </div>
+
+                    <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto">
+                        <div className="relative group w-full md:w-64">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
+                        <input 
+                            type="text" 
+                            placeholder="Buscar neste mês..." 
+                            className="w-full pl-10 pr-4 py-3 md:py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-sm"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                        </div>
+                    </div>
+                    </div>
+
+                    <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                        <thead>
+                        <tr className="bg-slate-50 border-b border-slate-200 text-xs uppercase tracking-wider text-slate-500 font-semibold">
+                            <th className="p-3 md:p-4 w-12 text-center hidden md:table-cell">#</th>
+                            <th className="p-3 md:p-4 min-w-[180px] md:min-w-[250px]">Descrição</th>
+                            <th className="p-3 md:p-4 min-w-[140px] md:w-48">Categoria</th>
+                            <th className="p-3 md:p-4 min-w-[140px] md:w-40">Tipo</th>
+                            <th className="p-3 md:p-4 min-w-[120px] md:w-48 text-right">Valor (R$)</th>
+                            <th className="p-3 md:p-4 min-w-[80px] md:w-16 text-center">Ações</th>
+                        </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                        {filteredExpenses.length > 0 ? (
+                            filteredExpenses.map((expense, index) => (
+                            <tr key={expense.id} className="hover:bg-slate-50/80 transition-colors group">
+                                <td className="p-3 md:p-4 text-center text-slate-400 text-sm align-middle hidden md:table-cell">
+                                {index + 1}
+                                </td>
+                                
+                                <td className="p-3 md:p-4 align-middle">
+                                <input 
+                                    type="text" 
+                                    value={expense.description} 
+                                    onChange={(e) => handleUpdateExpense(expense.id, 'description', e.target.value)}
+                                    className="w-full bg-transparent border-none focus:ring-0 p-0 font-medium text-slate-700 placeholder-slate-400 text-sm md:text-base"
+                                    placeholder="Nome..."
+                                />
+                                </td>
+
+                                <td className="p-3 md:p-4 align-middle">
+                                <input 
+                                    list={`categories-${expense.id}`}
+                                    value={expense.category}
+                                    onChange={(e) => handleUpdateExpense(expense.id, 'category', e.target.value)}
+                                    className="w-full bg-slate-100/50 px-2 py-1.5 rounded border border-transparent focus:bg-white focus:border-emerald-200 focus:ring-2 focus:ring-emerald-500/10 text-xs md:text-sm text-slate-600"
+                                    />
+                                    <datalist id={`categories-${expense.id}`}>
+                                    {categories.map(c => <option key={c} value={c} />)}
+                                    </datalist>
+                                </td>
+
+                                <td className="p-3 md:p-4 align-top">
+                                <div className="flex flex-col gap-2">
+                                    <div className="relative">
+                                        <select 
+                                        value={expense.type}
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+                                            let updates = { type: val };
+                                            if (val === 'Parcelado' && !expense.installments) {
+                                            updates.currentInstallment = 1;
+                                            updates.installments = 12;
+                                            }
+                                            setExpenses(expenses.map(exp => exp.id === expense.id ? { ...exp, ...updates } : exp));
+                                        }}
+                                        className={`w-full appearance-none pl-3 pr-8 py-1.5 rounded-lg text-[10px] md:text-xs font-bold border focus:outline-none focus:ring-2 focus:ring-offset-1 cursor-pointer transition-colors uppercase tracking-wide ${getTypeStyles(expense.type)}`}
+                                        >
+                                        {types.map(t => <option key={t} value={t}>{t}</option>)}
+                                        </select>
+                                        <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none">
+                                        <ChevronDown className={`w-3 h-3 opacity-50 ${expense.type === 'Parcelado' ? 'text-purple-700' : 'text-slate-500'}`} />
+                                        </div>
+                                    </div>
+                                    
+                                    {expense.type === "Parcelado" && (
+                                    <div className="flex flex-col bg-white rounded-lg border border-purple-100 shadow-sm p-1.5 md:p-2 gap-1 animate-in fade-in slide-in-from-top-1 duration-200">
+                                        <span className="text-[9px] md:text-[10px] text-purple-400 font-bold uppercase tracking-wider text-center">Parcelas</span>
+                                        <div className="flex items-center justify-center gap-1.5">
+                                            <input 
+                                            type="number" 
+                                            min="1"
+                                            value={expense.currentInstallment}
+                                            onChange={(e) => handleUpdateExpense(expense.id, 'currentInstallment', Number(e.target.value))}
+                                            className="w-8 md:w-10 text-center bg-purple-50 rounded-md border border-purple-200 text-purple-700 font-bold text-xs md:text-sm focus:outline-none focus:ring-2 focus:ring-purple-200 py-1"
+                                            />
+                                            <span className="text-purple-300 font-medium">/</span>
+                                            <input 
+                                            type="number" 
+                                            min="1"
+                                            value={expense.installments}
+                                            onChange={(e) => handleUpdateExpense(expense.id, 'installments', Number(e.target.value))}
+                                            className="w-8 md:w-10 text-center bg-purple-50 rounded-md border border-purple-200 text-purple-700 font-bold text-xs md:text-sm focus:outline-none focus:ring-2 focus:ring-purple-200 py-1"
+                                            />
+                                        </div>
+                                    </div>
+                                    )}
+                                </div>
+                                </td>
+
+                                <td className="p-3 md:p-4 text-right align-middle">
+                                <div className="flex items-center justify-end gap-1 font-mono text-slate-700">
+                                    <span className="text-slate-400 text-xs hidden md:inline">R$</span>
+                                    <input 
+                                    type="number" 
+                                    min="0" 
+                                    step="0.01"
+                                    value={expense.amount}
+                                    onChange={(e) => handleUpdateExpense(expense.id, 'amount', e.target.value)}
+                                    className="w-24 md:w-32 text-right bg-transparent focus:outline-none focus:border-b focus:border-emerald-500 text-sm md:text-base"
+                                    />
+                                </div>
+                                </td>
+
+                                <td className="p-3 md:p-4 text-center align-middle">
+                                <button 
+                                    onClick={() => handleDeleteExpense(expense.id)}
+                                    className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all md:opacity-0 group-hover:opacity-100"
+                                    title="Excluir despesa"
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                </button>
+                                </td>
+                            </tr>
+                            ))
+                        ) : (
+                            <tr>
+                            <td colSpan="6" className="p-8 md:p-12 text-center text-slate-400 bg-slate-50/50">
+                                <div className="flex flex-col items-center gap-3">
+                                <Wallet className="w-8 h-8 md:w-12 md:h-12 text-slate-300" />
+                                <p className="text-sm md:text-base">Nenhuma despesa para {formatMonthDisplay(currentMonth)}.</p>
+                                <button onClick={handleAddExpense} className="text-emerald-600 hover:text-emerald-700 font-medium text-xs md:text-sm underline decoration-emerald-200 underline-offset-4 mt-2">
+                                    Adicionar despesa
+                                </button>
+                                </div>
+                            </td>
+                            </tr>
+                        )}
+                        </tbody>
+                    </table>
+                    </div>
+                    
+                    <div className="bg-slate-50 p-4 border-t border-slate-200 text-xs text-slate-500 flex flex-col md:flex-row justify-between items-center gap-2">
+                    <span className="font-medium text-slate-600">{formatMonthDisplay(currentMonth)} • {filteredExpenses.length} registros</span>
+                    <div className="flex gap-4 w-full md:w-auto justify-center md:justify-end">
+                        <span className="flex items-center gap-1 font-medium bg-white px-3 py-1.5 rounded border border-slate-200 shadow-sm">
+                            Total: {formatCurrency(currentTotalExpenses)}
+                        </span>
+                    </div>
+                    </div>
+                </div>
+                </div>
+            );
+        }
+
+        function StatCard({ title, value, icon, color, subtext, textColor, highlight }) {
+            return (
+                <div className={`bg-white p-5 md:p-6 rounded-xl shadow-sm border border-slate-200 flex items-start justify-between ${color} ${highlight ? 'bg-emerald-50' : ''} transition-transform hover:-translate-y-1 duration-300`}>
+                <div>
+                    <p className="text-slate-500 text-xs md:text-sm font-medium mb-1">{title}</p>
+                    <div className={`text-xl md:text-2xl font-bold tracking-tight ${textColor || 'text-slate-800'}`}>{value}</div>
+                    {subtext && <div className="text-[10px] md:text-xs text-slate-400 mt-2">{subtext}</div>}
+                </div>
+                <div className={`p-2 md:p-3 rounded-lg ${highlight ? 'bg-emerald-100' : 'bg-slate-50'}`}>
+                    {icon}
+                </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
