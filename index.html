@@ -3,21 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <!-- Cores para Android e iOS -->
+    <meta name="theme-color" content="#ffffff">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-capable" content="yes">
     <title>Controle de Gastos</title>
     
-    <!-- 1. Carregando React e ReactDOM -->
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- Bibliotecas React e Estilo -->
     <script crossorigin src="https://unpkg.com/react@18.2.0/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
-    
-    <!-- 2. Carregando Babel -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    
-    <!-- 3. Carregando Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="manifest" href="manifest.json">
+
     <style>
         body { background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; -webkit-tap-highlight-color: transparent; }
-        /* Esconde a barra de rolagem mas permite rolar */
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
@@ -26,9 +27,9 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect } = React;
+        const { useState, useEffect, useRef } = React;
 
-        // --- ÍCONES ---
+        // --- ÍCONES EMBUTIDOS ---
         const IconBase = ({ children, className }) => (
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>{children}</svg>
         );
@@ -37,7 +38,6 @@
         const Wallet = (props) => <IconBase {...props}><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></IconBase>;
         const Search = (props) => <IconBase {...props}><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></IconBase>;
         const LayoutDashboard = (props) => <IconBase {...props}><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></IconBase>;
-        const TrendingDown = (props) => <IconBase {...props}><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></IconBase>;
         const DollarSign = (props) => <IconBase {...props}><line x1="12" x2="12" y1="2" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></IconBase>;
         const PiggyBank = (props) => <IconBase {...props}><path d="M19 5c-1.5 0-2.8.6-3.8 1.5l-2.5 2.5"/><path d="M2 20h20"/><path d="M5 18v3"/><path d="M19 18v3"/><path d="M4 15h12.4a2 2 0 0 1 1.6.8l3.1 3.5H3.6l-2-2.3a2 2 0 0 1 .4-2.7l3-1.8Z"/><path d="M16 11h.01"/><path d="M13.6 7.6c.7-.9.5-2.2-.4-2.8-1-.7-2.3-.5-2.8.4-.7.9-.5 2.2.4 2.8.9.7 2.3.5 2.8-.4Z"/></IconBase>;
         const ChevronLeft = (props) => <IconBase {...props}><path d="m15 18-6-6 6-6"/></IconBase>;
@@ -46,28 +46,57 @@
         const CalendarDays = (props) => <IconBase {...props}><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/><path d="M16 18h.01"/></IconBase>;
         const ChevronDown = (props) => <IconBase {...props}><path d="m6 9 6 6 6-6"/></IconBase>;
         const X = (props) => <IconBase {...props}><path d="M18 6 6 18"/><path d="m6 6 12 12"/></IconBase>;
-        const Edit2 = (props) => <IconBase {...props}><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></IconBase>;
 
-        // --- DADOS E CONSTANTES ---
-        const initialData = [
-            { id: 1, description: "Aluguel Apartamento", category: "Moradia", type: "Fixo", amount: 2500.00, month: "2025-01" },
-            { id: 2, description: "Supermercado Semanal", category: "Alimentação", type: "Variável", amount: 850.50, month: "2025-01" },
-            { id: 3, description: "Notebook Novo", category: "Eletrônicos", type: "Parcelado", amount: 350.00, month: "2025-01", currentInstallment: 1, installments: 10 },
-            { id: 4, description: "Internet Fibra", category: "Contas", type: "Fixo", amount: 120.00, month: "2025-01" },
-        ];
-
+        // --- CONSTANTES ---
         const categories = ["Moradia", "Alimentação", "Transporte", "Saúde", "Educação", "Lazer", "Contas", "Eletrônicos", "Outros"];
         const types = ["Fixo", "Variável", "Parcelado"];
         const START_MONTH = "2025-01"; 
+        
+        // Chaves de armazenamento seguras
+        const STORAGE_KEY_EXPENSES = "gastos_app_expenses_v2";
+        const STORAGE_KEY_SALARIES = "gastos_app_salaries_v2";
+
+        // Dados iniciais APENAS para primeira execução
+        const defaultData = [
+            { id: 1, description: "Exemplo: Aluguel", category: "Moradia", type: "Fixo", amount: 0.00, month: START_MONTH },
+        ];
 
         function App() {
             const [currentMonth, setCurrentMonth] = useState(START_MONTH);
-            const [expenses, setExpenses] = useState(initialData);
             const [searchTerm, setSearchTerm] = useState("");
             const [isModalOpen, setIsModalOpen] = useState(false);
-            const [editingExpense, setEditingExpense] = useState(null); // Se null, é adição. Se objeto, é edição.
+            const [editingExpense, setEditingExpense] = useState(null);
             
-            // Estado do Formulário do Modal
+            // --- SISTEMA DE CARREGAMENTO INTELIGENTE ---
+            const [expenses, setExpenses] = useState(() => {
+                try {
+                    const saved = localStorage.getItem(STORAGE_KEY_EXPENSES);
+                    return saved ? JSON.parse(saved) : defaultData;
+                } catch (error) {
+                    console.error("Erro ao carregar despesas:", error);
+                    return defaultData;
+                }
+            });
+
+            const [salaries, setSalaries] = useState(() => {
+                try {
+                    const saved = localStorage.getItem(STORAGE_KEY_SALARIES);
+                    return saved ? JSON.parse(saved) : { [START_MONTH]: 5000.00 };
+                } catch (error) {
+                    return { [START_MONTH]: 5000.00 };
+                }
+            });
+
+            // --- SISTEMA DE SALVAMENTO AUTOMÁTICO ---
+            useEffect(() => {
+                localStorage.setItem(STORAGE_KEY_EXPENSES, JSON.stringify(expenses));
+            }, [expenses]);
+
+            useEffect(() => {
+                localStorage.setItem(STORAGE_KEY_SALARIES, JSON.stringify(salaries));
+            }, [salaries]);
+
+            // Estado do Formulário
             const [formData, setFormData] = useState({
                 description: "",
                 category: "Outros",
@@ -76,19 +105,14 @@
                 installments: 12,
                 currentInstallment: 1
             });
-            
-            const [salaries, setSalaries] = useState({ "2025-01": 5000.00 });
 
-            // --- LÓGICA DE NEGÓCIO ---
-
-            // Abre modal para criar
+            // Funções do Modal
             const openNewExpenseModal = () => {
                 setEditingExpense(null);
                 setFormData({ description: "", category: "Outros", type: "Variável", amount: "", installments: 12, currentInstallment: 1 });
                 setIsModalOpen(true);
             };
 
-            // Abre modal para editar
             const openEditExpenseModal = (expense) => {
                 setEditingExpense(expense);
                 setFormData({
@@ -111,7 +135,6 @@
                     type: formData.type,
                     amount: parseFloat(formData.amount),
                     month: currentMonth,
-                    // Apenas adiciona dados de parcelas se for parcelado
                     ...(formData.type === 'Parcelado' ? {
                         installments: parseInt(formData.installments),
                         currentInstallment: parseInt(formData.currentInstallment)
@@ -119,11 +142,9 @@
                 };
 
                 if (editingExpense) {
-                    // Atualizar existente
-                    setExpenses(expenses.map(e => e.id === editingExpense.id ? { ...e, ...expenseData } : e));
+                    setExpenses(prev => prev.map(e => e.id === editingExpense.id ? { ...e, ...expenseData } : e));
                 } else {
-                    // Criar novo
-                    setExpenses([...expenses, { id: Date.now(), ...expenseData }]);
+                    setExpenses(prev => [...prev, { id: Date.now(), ...expenseData }]);
                 }
                 setIsModalOpen(false);
             };
@@ -137,7 +158,7 @@
                 }
             };
 
-            // ... (Lógica de recorrência e navegação mantida igual) ...
+            // Lógica de Recorrência
             const checkAndCopyRecurringExpenses = (targetMonth) => {
                 if (targetMonth === START_MONTH) return;
                 const [year, month] = targetMonth.split('-').map(Number);
@@ -161,8 +182,17 @@
                         }
                     }
                 });
-                if (newExpenses.length > 0) setExpenses(prev => [...prev, ...newExpenses]);
-                setSalaries(prev => { if (prev[targetMonth] === undefined) return { ...prev, [targetMonth]: prev[prevMonthStr] || 0 }; return prev; });
+                
+                if (newExpenses.length > 0) {
+                    setExpenses(prev => [...prev, ...newExpenses]);
+                }
+                
+                setSalaries(prev => { 
+                    if (prev[targetMonth] === undefined) {
+                        return { ...prev, [targetMonth]: prev[prevMonthStr] || 0 }; 
+                    }
+                    return prev; 
+                });
             };
 
             useEffect(() => { checkAndCopyRecurringExpenses(currentMonth); }, [currentMonth]);
@@ -189,6 +219,7 @@
                 return `${monthName.charAt(0).toUpperCase() + monthName.slice(1)} de ${year}`;
             };
 
+            // Cálculos
             const calculatePreviousBalance = () => {
                 const allMonths = new Set([...Object.keys(salaries), ...expenses.map(e => e.month)]);
                 const validMonths = Array.from(allMonths).filter(m => m >= START_MONTH).sort();
@@ -206,13 +237,11 @@
             const currentMonthSalary = salaries[currentMonth] || 0;
             const currentMonthExpensesList = expenses.filter(e => e.month === currentMonth);
             const currentTotalExpenses = currentMonthExpensesList.reduce((acc, curr) => acc + Number(curr.amount), 0);
-            const currentFixedExpenses = currentMonthExpensesList.filter(e => e.type === "Fixo").reduce((acc, curr) => acc + Number(curr.amount), 0);
-            const currentVariableExpenses = currentMonthExpensesList.filter(e => e.type === "Variável").reduce((acc, curr) => acc + Number(curr.amount), 0);
-            const currentInstallmentExpenses = currentMonthExpensesList.filter(e => e.type === "Parcelado").reduce((acc, curr) => acc + Number(curr.amount), 0);
             const finalBalance = previousBalance + currentMonthSalary - currentTotalExpenses;
+            
             const formatCurrency = (value) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
             const handleSalaryChange = (val) => setSalaries(prev => ({ ...prev, [currentMonth]: Number(val) }));
-            const handleDeleteExpense = (id) => setExpenses(expenses.filter(e => e.id !== id));
+            const handleDeleteExpense = (id) => setExpenses(prev => prev.filter(e => e.id !== id));
             
             const filteredExpenses = currentMonthExpensesList.filter(e => 
                 e.description.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -222,9 +251,9 @@
             const isStartMonth = currentMonth === START_MONTH;
 
             return (
-                <div className="min-h-screen bg-slate-50 font-sans text-slate-800 pb-20 md:pb-0">
+                <div className="min-h-screen bg-slate-50 font-sans text-slate-800 pb-20 md:pb-0 select-none">
                 
-                {/* Header Mobile Otimizado */}
+                {/* Header */}
                 <div className="max-w-7xl mx-auto px-4 pt-6 pb-4">
                     <header className="flex flex-col gap-4">
                         <div className="flex justify-between items-center">
@@ -235,7 +264,6 @@
                                 <h1 className="text-xl font-bold text-slate-900">Controle</h1>
                             </div>
                             
-                            {/* Seletor de Mês Compacto */}
                             <div className="flex items-center bg-white rounded-full shadow-sm border border-slate-200 pl-1 pr-3 py-1">
                                 <button onClick={() => handleMonthChange(-1)} disabled={isStartMonth} className={`p-1.5 rounded-full ${isStartMonth ? 'text-slate-300' : 'text-slate-500 active:bg-slate-100'}`}>
                                     <ChevronLeft className="w-5 h-5" />
@@ -252,15 +280,8 @@
                             </div>
                         </div>
 
-                        {/* Dashboard Grid 2 Colunas no Mobile */}
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                            <StatCard 
-                                title="Saldo Anterior" 
-                                value={formatCurrency(previousBalance)} 
-                                icon={<History className="w-4 h-4 text-purple-600" />} 
-                                color="border-l-4 border-purple-500"
-                                textColor={previousBalance >= 0 ? 'text-slate-800' : 'text-red-500'}
-                            />
+                            <StatCard title="Saldo Anterior" value={formatCurrency(previousBalance)} icon={<History className="w-4 h-4 text-purple-600" />} color="border-l-4 border-purple-500" textColor={previousBalance >= 0 ? 'text-slate-800' : 'text-red-500'} />
 
                             <div className="bg-white p-3 md:p-5 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-between border-l-4 border-blue-500 relative overflow-hidden">
                                 <div className="flex justify-between items-start">
@@ -269,60 +290,32 @@
                                 </div>
                                 <div className="flex items-baseline gap-0.5 mt-1">
                                     <span className="text-slate-400 text-xs font-normal">R$</span>
-                                    <input 
-                                    type="number" 
-                                    value={currentMonthSalary} 
-                                    onChange={(e) => handleSalaryChange(e.target.value)}
-                                    className="w-full bg-transparent border-none p-0 focus:ring-0 text-base md:text-2xl font-bold text-slate-800"
-                                    />
+                                    <input type="number" value={currentMonthSalary} onChange={(e) => handleSalaryChange(e.target.value)} className="w-full bg-transparent border-none p-0 focus:ring-0 text-base md:text-2xl font-bold text-slate-800" />
                                 </div>
                             </div>
 
-                            <StatCard 
-                                title="Gastos" 
-                                value={formatCurrency(currentTotalExpenses)}
-                                icon={<LayoutDashboard className="w-4 h-4 text-indigo-600" />} 
-                                color="border-l-4 border-indigo-500"
-                            />
+                            <StatCard title="Gastos" value={formatCurrency(currentTotalExpenses)} icon={<LayoutDashboard className="w-4 h-4 text-indigo-600" />} color="border-l-4 border-indigo-500" />
 
-                            <StatCard 
-                                title="Saldo Atual" 
-                                value={formatCurrency(finalBalance)} 
-                                icon={<PiggyBank className="w-4 h-4 text-emerald-600" />} 
-                                color="border-l-4 border-emerald-500"
-                                textColor={finalBalance >= 0 ? 'text-emerald-700' : 'text-red-600'}
-                                highlight={true}
-                            />
+                            <StatCard title="Saldo Atual" value={formatCurrency(finalBalance)} icon={<PiggyBank className="w-4 h-4 text-emerald-600" />} color="border-l-4 border-emerald-500" textColor={finalBalance >= 0 ? 'text-emerald-700' : 'text-red-600'} highlight={true} />
                         </div>
                     </header>
                 </div>
 
-                {/* Lista de Gastos e Barra de Busca */}
+                {/* Área Principal */}
                 <div className="max-w-7xl mx-auto px-4">
                     <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden min-h-[50vh]">
-                        
-                        {/* Toolbar */}
                         <div className="p-4 border-b border-slate-100 flex gap-3 sticky top-0 bg-white z-10">
                             <div className="relative flex-1">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                                <input 
-                                    type="text" 
-                                    placeholder="Buscar..." 
-                                    className="w-full pl-9 pr-4 py-2.5 bg-slate-100 border-none rounded-lg focus:ring-2 focus:ring-emerald-500/20 text-sm"
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                />
+                                <input type="text" placeholder="Buscar..." className="w-full pl-9 pr-4 py-2.5 bg-slate-100 border-none rounded-lg focus:ring-2 focus:ring-emerald-500/20 text-sm" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
                             </div>
-                            <button 
-                                onClick={openNewExpenseModal}
-                                className="flex items-center justify-center gap-2 bg-emerald-600 text-white px-4 py-2.5 rounded-lg font-bold shadow-sm active:scale-95 transition-transform"
-                            >
+                            <button onClick={openNewExpenseModal} className="flex items-center justify-center gap-2 bg-emerald-600 text-white px-4 py-2.5 rounded-lg font-bold shadow-sm active:scale-95 transition-transform">
                                 <Plus className="w-5 h-5" />
                                 <span className="hidden md:inline">Nova</span>
                             </button>
                         </div>
 
-                        {/* LISTA MOBILE (CARDS) */}
+                        {/* Visualização Mobile (Cards) */}
                         <div className="md:hidden divide-y divide-slate-100">
                             {filteredExpenses.length > 0 ? (
                                 filteredExpenses.map((expense) => (
@@ -333,9 +326,7 @@
                                         </div>
                                         <div className="flex justify-between items-center text-xs">
                                             <div className="flex items-center gap-2">
-                                                <span className={`px-2 py-0.5 rounded-full border ${getTypeStyles(expense.type)}`}>
-                                                    {expense.type}
-                                                </span>
+                                                <span className={`px-2 py-0.5 rounded-full border ${getTypeStyles(expense.type)}`}>{expense.type}</span>
                                                 <span className="text-slate-500">{expense.category}</span>
                                             </div>
                                             {expense.type === 'Parcelado' && (
@@ -351,7 +342,7 @@
                             )}
                         </div>
 
-                        {/* TABELA DESKTOP (Mantida para telas grandes) */}
+                        {/* Visualização Desktop (Tabela) */}
                         <div className="hidden md:block overflow-x-auto">
                             <table className="w-full text-left border-collapse">
                                 <thead>
@@ -383,7 +374,7 @@
                     </div>
                 </div>
 
-                {/* MODAL DE ADIÇÃO/EDIÇÃO (Ótimo para Mobile) */}
+                {/* Modal */}
                 {isModalOpen && (
                     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
                         <div className="bg-white w-full max-w-md rounded-2xl shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
@@ -397,51 +388,27 @@
                                     <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Valor (R$)</label>
                                     <div className="relative">
                                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold">R$</span>
-                                        <input 
-                                            type="number" step="0.01" inputMode="decimal"
-                                            className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xl font-bold text-slate-800 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
-                                            placeholder="0,00"
-                                            value={formData.amount}
-                                            onChange={(e) => setFormData({...formData, amount: e.target.value})}
-                                            autoFocus={!editingExpense}
-                                        />
+                                        <input type="number" step="0.01" inputMode="decimal" className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xl font-bold text-slate-800 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none" placeholder="0,00" value={formData.amount} onChange={(e) => setFormData({...formData, amount: e.target.value})} autoFocus={!editingExpense} />
                                     </div>
                                 </div>
-
                                 <div>
                                     <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Descrição</label>
-                                    <input 
-                                        type="text" 
-                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:ring-2 focus:ring-emerald-500 outline-none"
-                                        placeholder="Ex: Mercado, Uber..."
-                                        value={formData.description}
-                                        onChange={(e) => setFormData({...formData, description: e.target.value})}
-                                    />
+                                    <input type="text" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="Ex: Mercado, Uber..." value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} />
                                 </div>
-
                                 <div className="grid grid-cols-2 gap-3">
                                     <div>
                                         <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Categoria</label>
-                                        <select 
-                                            className="w-full px-3 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 focus:ring-2 focus:ring-emerald-500 outline-none appearance-none"
-                                            value={formData.category}
-                                            onChange={(e) => setFormData({...formData, category: e.target.value})}
-                                        >
+                                        <select className="w-full px-3 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 focus:ring-2 focus:ring-emerald-500 outline-none appearance-none" value={formData.category} onChange={(e) => setFormData({...formData, category: e.target.value})}>
                                             {categories.map(c => <option key={c} value={c}>{c}</option>)}
                                         </select>
                                     </div>
                                     <div>
                                         <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Tipo</label>
-                                        <select 
-                                            className="w-full px-3 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 focus:ring-2 focus:ring-emerald-500 outline-none appearance-none"
-                                            value={formData.type}
-                                            onChange={(e) => setFormData({...formData, type: e.target.value})}
-                                        >
+                                        <select className="w-full px-3 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 focus:ring-2 focus:ring-emerald-500 outline-none appearance-none" value={formData.type} onChange={(e) => setFormData({...formData, type: e.target.value})}>
                                             {types.map(t => <option key={t} value={t}>{t}</option>)}
                                         </select>
                                     </div>
                                 </div>
-
                                 {formData.type === 'Parcelado' && (
                                     <div className="bg-purple-50 p-4 rounded-xl border border-purple-100 animate-in slide-in-from-top-2">
                                         <p className="text-xs font-bold text-purple-600 uppercase mb-2 text-center">Configurar Parcelas</p>
@@ -459,32 +426,18 @@
                                     </div>
                                 )}
                             </div>
-
                             <div className="p-4 border-t border-slate-100 flex gap-3">
                                 {editingExpense && (
-                                    <button 
-                                        onClick={() => { handleDeleteExpense(editingExpense.id); setIsModalOpen(false); }}
-                                        className="px-4 py-3 rounded-xl bg-red-50 text-red-600 font-bold flex-1"
-                                    >
-                                        Excluir
-                                    </button>
+                                    <button onClick={() => { handleDeleteExpense(editingExpense.id); setIsModalOpen(false); }} className="px-4 py-3 rounded-xl bg-red-50 text-red-600 font-bold flex-1">Excluir</button>
                                 )}
-                                <button 
-                                    onClick={handleSaveExpense}
-                                    className="px-4 py-3 rounded-xl bg-emerald-600 text-white font-bold flex-[2] shadow-lg shadow-emerald-200 active:scale-95 transition-transform"
-                                >
-                                    {editingExpense ? 'Salvar Alterações' : 'Adicionar Despesa'}
-                                </button>
+                                <button onClick={handleSaveExpense} className="px-4 py-3 rounded-xl bg-emerald-600 text-white font-bold flex-[2] shadow-lg shadow-emerald-200 active:scale-95 transition-transform">{editingExpense ? 'Salvar Alterações' : 'Adicionar Despesa'}</button>
                             </div>
                         </div>
                     </div>
                 )}
 
-                {/* Botão Flutuante (FAB) apenas Mobile */}
-                <button 
-                    onClick={openNewExpenseModal}
-                    className="md:hidden fixed bottom-6 right-6 w-14 h-14 bg-emerald-600 text-white rounded-full shadow-xl shadow-emerald-300 flex items-center justify-center active:scale-90 transition-transform z-40"
-                >
+                {/* Botão FAB Corrigido: Sem sombra brilhante/blur */}
+                <button onClick={openNewExpenseModal} className="md:hidden fixed bottom-6 right-6 w-14 h-14 bg-emerald-600 text-white rounded-full shadow-lg flex items-center justify-center active:scale-90 transition-transform z-40">
                     <Plus className="w-8 h-8" />
                 </button>
 
