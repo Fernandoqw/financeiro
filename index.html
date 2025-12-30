@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <!-- Cores para Android e iOS -->
+    <!-- Cores e Configurações PWA -->
     <meta name="theme-color" content="#ffffff">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -11,7 +11,7 @@
     
     <link rel="manifest" href="manifest.json">
     
-    <!-- Bibliotecas React e Estilo -->
+    <!-- Bibliotecas -->
     <script crossorigin src="https://unpkg.com/react@18.2.0/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -29,7 +29,7 @@
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
 
-        // --- ÍCONES EMBUTIDOS ---
+        // --- ÍCONES ---
         const IconBase = ({ children, className }) => (
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>{children}</svg>
         );
@@ -47,16 +47,16 @@
         const ChevronDown = (props) => <IconBase {...props}><path d="m6 9 6 6 6-6"/></IconBase>;
         const X = (props) => <IconBase {...props}><path d="M18 6 6 18"/><path d="m6 6 12 12"/></IconBase>;
 
-        // --- CONSTANTES ---
         const categories = ["Moradia", "Alimentação", "Transporte", "Saúde", "Educação", "Lazer", "Contas", "Eletrônicos", "Outros"];
         const types = ["Fixo", "Variável", "Parcelado"];
-        const START_MONTH = "2025-01"; 
         
-        // Chaves de armazenamento seguras
-        const STORAGE_KEY_EXPENSES = "gastos_app_expenses_v2";
-        const STORAGE_KEY_SALARIES = "gastos_app_salaries_v2";
+        // --- DATA DE INÍCIO ATUALIZADA PARA 2026 ---
+        const START_MONTH = "2026-01"; 
+        
+        // Chaves de armazenamento atualizadas para v3 (Garante limpeza de dados antigos)
+        const STORAGE_KEY_EXPENSES = "gastos_app_expenses_v3";
+        const STORAGE_KEY_SALARIES = "gastos_app_salaries_v3";
 
-        // Dados iniciais APENAS para primeira execução
         const defaultData = [
             { id: 1, description: "Exemplo: Aluguel", category: "Moradia", type: "Fixo", amount: 0.00, month: START_MONTH },
         ];
@@ -67,13 +67,12 @@
             const [isModalOpen, setIsModalOpen] = useState(false);
             const [editingExpense, setEditingExpense] = useState(null);
             
-            // --- SISTEMA DE CARREGAMENTO INTELIGENTE ---
+            // --- CARREGAMENTO ---
             const [expenses, setExpenses] = useState(() => {
                 try {
                     const saved = localStorage.getItem(STORAGE_KEY_EXPENSES);
                     return saved ? JSON.parse(saved) : defaultData;
                 } catch (error) {
-                    console.error("Erro ao carregar despesas:", error);
                     return defaultData;
                 }
             });
@@ -87,7 +86,7 @@
                 }
             });
 
-            // --- SISTEMA DE SALVAMENTO AUTOMÁTICO ---
+            // --- SALVAMENTO ---
             useEffect(() => {
                 localStorage.setItem(STORAGE_KEY_EXPENSES, JSON.stringify(expenses));
             }, [expenses]);
@@ -96,7 +95,6 @@
                 localStorage.setItem(STORAGE_KEY_SALARIES, JSON.stringify(salaries));
             }, [salaries]);
 
-            // Estado do Formulário
             const [formData, setFormData] = useState({
                 description: "",
                 category: "Outros",
@@ -106,7 +104,8 @@
                 currentInstallment: 1
             });
 
-            // Funções do Modal
+            // --- FUNÇÕES ---
+
             const openNewExpenseModal = () => {
                 setEditingExpense(null);
                 setFormData({ description: "", category: "Outros", type: "Variável", amount: "", installments: 12, currentInstallment: 1 });
@@ -129,22 +128,44 @@
             const handleSaveExpense = () => {
                 if (!formData.description || !formData.amount) return;
 
+                // Gera um ID de grupo se for parcelado e não tiver um
+                const isParcelado = formData.type === 'Parcelado';
+                const groupId = editingExpense?.groupId || (isParcelado ? `group_${Date.now()}` : undefined);
+
                 const expenseData = {
                     description: formData.description,
                     category: formData.category,
                     type: formData.type,
                     amount: parseFloat(formData.amount),
                     month: currentMonth,
-                    ...(formData.type === 'Parcelado' ? {
+                    groupId: groupId,
+                    ...(isParcelado ? {
                         installments: parseInt(formData.installments),
                         currentInstallment: parseInt(formData.currentInstallment)
-                    } : {})
+                    } : {
+                        installments: undefined,
+                        currentInstallment: undefined
+                    })
                 };
 
                 if (editingExpense) {
                     setExpenses(prev => prev.map(e => e.id === editingExpense.id ? { ...e, ...expenseData } : e));
                 } else {
                     setExpenses(prev => [...prev, { id: Date.now(), ...expenseData }]);
+                }
+                setIsModalOpen(false);
+            };
+
+            const handleDeleteExpense = (expense) => {
+                // Se for parcelado e tiver um grupo, apaga TODAS as ocorrências desse grupo
+                if (expense.type === 'Parcelado' && expense.groupId) {
+                    const confirm = window.confirm("Isso apagará todas as parcelas (passadas e futuras) desta compra. Confirmar?");
+                    if (confirm) {
+                        setExpenses(prev => prev.filter(e => e.groupId !== expense.groupId));
+                    }
+                } else {
+                    // Exclusão normal
+                    setExpenses(prev => prev.filter(e => e.id !== expense.id));
                 }
                 setIsModalOpen(false);
             };
@@ -158,7 +179,7 @@
                 }
             };
 
-            // Lógica de Recorrência
+            // Copia despesas para novos meses
             const checkAndCopyRecurringExpenses = (targetMonth) => {
                 if (targetMonth === START_MONTH) return;
                 const [year, month] = targetMonth.split('-').map(Number);
@@ -171,14 +192,27 @@
                 const newExpenses = [];
 
                 prevRecurringExpenses.forEach(prevExp => {
-                    const alreadyExists = targetMonthExpenses.some(t => t.description === prevExp.description && t.category === prevExp.category);
+                    const alreadyExists = targetMonthExpenses.some(t => 
+                        (t.groupId && t.groupId === prevExp.groupId) || 
+                        (t.description === prevExp.description && t.category === prevExp.category && t.amount === prevExp.amount)
+                    );
+
                     if (!alreadyExists) {
                         if (prevExp.type === "Parcelado") {
                             if (prevExp.currentInstallment < prevExp.installments) {
-                                newExpenses.push({ ...prevExp, id: Date.now() + Math.random(), month: targetMonth, currentInstallment: prevExp.currentInstallment + 1 });
+                                newExpenses.push({ 
+                                    ...prevExp, 
+                                    id: Date.now() + Math.random(), 
+                                    month: targetMonth, 
+                                    currentInstallment: prevExp.currentInstallment + 1 
+                                });
                             }
                         } else {
-                            newExpenses.push({ ...prevExp, id: Date.now() + Math.random(), month: targetMonth });
+                            newExpenses.push({ 
+                                ...prevExp, 
+                                id: Date.now() + Math.random(), 
+                                month: targetMonth 
+                            });
                         }
                     }
                 });
@@ -219,7 +253,6 @@
                 return `${monthName.charAt(0).toUpperCase() + monthName.slice(1)} de ${year}`;
             };
 
-            // Cálculos
             const calculatePreviousBalance = () => {
                 const allMonths = new Set([...Object.keys(salaries), ...expenses.map(e => e.month)]);
                 const validMonths = Array.from(allMonths).filter(m => m >= START_MONTH).sort();
@@ -241,7 +274,6 @@
             
             const formatCurrency = (value) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
             const handleSalaryChange = (val) => setSalaries(prev => ({ ...prev, [currentMonth]: Number(val) }));
-            const handleDeleteExpense = (id) => setExpenses(prev => prev.filter(e => e.id !== id));
             
             const filteredExpenses = currentMonthExpensesList.filter(e => 
                 e.description.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -364,7 +396,7 @@
                                         <td className="p-4"><span className={`px-2 py-1 rounded text-xs font-bold border ${getTypeStyles(expense.type)}`}>{expense.type}</span></td>
                                         <td className="p-4 text-right font-mono text-slate-700">{formatCurrency(expense.amount)}</td>
                                         <td className="p-4 text-center">
-                                            <button onClick={(e) => { e.stopPropagation(); handleDeleteExpense(expense.id); }} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded"><Trash2 className="w-4 h-4" /></button>
+                                            <button onClick={(e) => { e.stopPropagation(); handleDeleteExpense(expense); }} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded"><Trash2 className="w-4 h-4" /></button>
                                         </td>
                                     </tr>
                                 ))}
@@ -428,15 +460,15 @@
                             </div>
                             <div className="p-4 border-t border-slate-100 flex gap-3">
                                 {editingExpense && (
-                                    <button onClick={() => { handleDeleteExpense(editingExpense.id); setIsModalOpen(false); }} className="px-4 py-3 rounded-xl bg-red-50 text-red-600 font-bold flex-1">Excluir</button>
+                                    <button onClick={() => handleDeleteExpense(editingExpense)} className="px-4 py-3 rounded-xl bg-red-50 text-red-600 font-bold flex-1">Excluir</button>
                                 )}
-                                <button onClick={handleSaveExpense} className="px-4 py-3 rounded-xl bg-emerald-600 text-white font-bold flex-[2] shadow-lg shadow-emerald-200 active:scale-95 transition-transform">{editingExpense ? 'Salvar Alterações' : 'Adicionar Despesa'}</button>
+                                <button onClick={handleSaveExpense} className="px-4 py-3 rounded-xl bg-emerald-600 text-white font-bold flex-[2] shadow-lg active:scale-95 transition-transform">{editingExpense ? 'Salvar Alterações' : 'Adicionar Despesa'}</button>
                             </div>
                         </div>
                     </div>
                 )}
 
-                {/* Botão FAB Corrigido: Sem sombra brilhante/blur */}
+                {/* FAB */}
                 <button onClick={openNewExpenseModal} className="md:hidden fixed bottom-6 right-6 w-14 h-14 bg-emerald-600 text-white rounded-full shadow-lg flex items-center justify-center active:scale-90 transition-transform z-40">
                     <Plus className="w-8 h-8" />
                 </button>
