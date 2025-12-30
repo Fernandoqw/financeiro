@@ -21,24 +21,7 @@
       "src": "icon.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     }
-  ],
-  "screenshots": [
-    {
-      "src": "https://placehold.co/1080x1920/png?text=App+Mobile",
-      "sizes": "1080x1920",
-      "type": "image/png",
-      "form_factor": "narrow",
-      "label": "Tela Inicial no Celular"
-    },
-    {
-      "src": "https://placehold.co/1920x1080/png?text=App+Desktop",
-      "sizes": "1920x1080",
-      "type": "image/png",
-      "form_factor": "wide",
-      "label": "Painel no Computador"
-    }
-  ],
-  "prefer_related_applications": false
+  ]
 }
