@@ -368,16 +368,12 @@
                                 <h1 className="text-lg md:text-xl font-bold text-slate-900">Controle</h1>
                             </div>
                             <div className="flex items-center gap-2">
-                                <button onClick={() => setIsLogOpen(true)} className="w-9 h-9 rounded-full bg-white shadow-sm border border-slate-200 text-slate-600 flex items-center justify-center hover:bg-slate-50 transition-colors">
-                                    <i className="fa-solid fa-clipboard-list text-sm"></i>
-                                </button>
-
                                 <div className="flex items-center bg-white rounded-full shadow-sm border border-slate-200 pl-2 pr-2 py-1">
                                     <button type="button" onClick={() => handleMonthChange(-1)} disabled={isStartMonth} className={`p-1.5 rounded-full ${isStartMonth ? 'text-slate-300' : 'text-slate-500 active:bg-slate-100'}`}>
                                         <i className="fa-solid fa-chevron-left text-xs"></i>
                                     </button>
                                     <div className="relative mx-1">
-                                        <span className="text-xs font-bold text-slate-700 select-none block text-center min-w-[120px] capitalize">
+                                        <span className="text-xs font-bold text-slate-700 select-none block text-center min-w-[140px] capitalize">
                                             {formatMonthDisplay(currentMonth)}
                                         </span>
                                         <input type="month" min={START_MONTH} value={currentMonth} onChange={handleDateInput} className="absolute inset-0 opacity-0 w-full h-full" />
@@ -403,7 +399,7 @@
                             {/* Salário - Icon Azul */}
                             <div className="bg-white p-3 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-between border-l-4 border-blue-500 relative overflow-hidden min-h-[85px]">
                                 <div className="flex justify-between items-start">
-                                    <p className="text-slate-500 text-[10px] uppercase font-bold tracking-wide">Salário</p>
+                                    <p className="text-slate-500 text-xs uppercase font-bold tracking-wide">Salário</p>
                                     <div className="flex gap-2 items-center">
                                         <button type="button" onClick={handleReflectSalary} className="text-blue-400 hover:text-blue-600 active:scale-90 transition-transform" title="Refletir este salário para meses futuros">
                                             <i className="fa-solid fa-arrows-rotate text-xs"></i>
@@ -436,7 +432,7 @@
                             {/* Reserva - Icon Amber */}
                             <div className="bg-white p-3 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-between border-l-4 border-amber-500 relative overflow-hidden min-h-[85px]">
                                 <div className="flex justify-between items-start">
-                                    <p className="text-slate-500 text-[10px] uppercase font-bold tracking-wide">Reserva</p>
+                                    <p className="text-slate-500 text-xs uppercase font-bold tracking-wide">Reserva</p>
                                     <div className="p-1.5 bg-amber-100 rounded-lg">
                                         <i className="fa-solid fa-piggy-bank text-amber-600 text-xs"></i>
                                     </div>
@@ -465,45 +461,57 @@
                                 </div>
                             </div>
                             
-                            {/* Saldo Atual */}
-                            <div className="col-span-2 md:col-span-4 mt-1">
-                                <div className={`bg-white p-3 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between border-l-4 ${finalBalance >= 0 ? 'border-emerald-500 bg-emerald-50/30' : 'border-red-500 bg-red-50/30'}`}>
-                                    <div className="flex items-center gap-2 md:gap-3">
-                                        <div className={`p-1.5 md:p-2 rounded-full ${finalBalance >= 0 ? 'bg-emerald-100' : 'bg-red-100'}`}>
-                                            <i className={`fa-solid fa-wallet ${finalBalance >= 0 ? 'text-emerald-600' : 'text-red-600'} text-base md:text-lg`}></i>
-                                        </div>
-                                        <p className="text-slate-600 text-xs md:text-sm uppercase font-bold tracking-wide">SALDO</p>
-                                    </div>
-                                    <div className="flex items-center gap-2 md:gap-3">
-                                        <div className={`text-xl md:text-2xl font-bold tracking-tight ${finalBalance >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
-                                            {formatCurrency(finalBalance)}
-                                        </div>
-                                        {finalBalance < 0 && currentReserve > 0 && (
-                                            <button 
-                                                type="button"
-                                                onClick={withdrawFromReserve}
-                                                className="bg-red-100 hover:bg-red-200 text-red-700 py-1.5 px-2 md:px-3 rounded-lg transition-colors active:scale-90 shadow-sm flex items-center gap-1"
-                                                title="Usar reserva para cobrir saldo negativo"
-                                            >
-                                                <span className="text-[10px] font-bold uppercase hidden md:inline">Cobrir</span>
-                                                <i className="fa-solid fa-arrow-up text-xs"></i>
-                                            </button>
-                                        )}
+                            {/* Linha Inferior: Saldo + Extrato */}
+                            <div className="col-span-2 md:col-span-4 mt-2 flex gap-2 h-[80px]">
+                                {/* Saldo - 70% */}
+                                <div className={`w-[70%] bg-white px-4 py-2 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-center border-l-4 ${finalBalance >= 0 ? 'border-emerald-500' : 'border-red-500'} relative overflow-hidden`}>
+                                    <div className="flex justify-between items-center">
+                                         <div className="flex flex-col">
+                                            <div className="flex items-center gap-1.5 mb-0.5">
+                                                <i className={`fa-solid fa-wallet ${finalBalance >= 0 ? 'text-emerald-600' : 'text-red-600'} text-[10px]`}></i>
+                                                <span className="text-slate-500 text-xs uppercase font-bold tracking-wide">Saldo Atual</span>
+                                            </div>
+                                            <div className={`text-xl md:text-2xl font-bold tracking-tight leading-none ${finalBalance >= 0 ? 'text-slate-800' : 'text-red-600'}`}>
+                                                {formatCurrency(finalBalance)}
+                                            </div>
+                                         </div>
+                                         
+                                         {/* Botão Cobrir Compacto */}
+                                         {finalBalance < 0 && currentReserve > 0 && (
+                                             <button 
+                                                 type="button"
+                                                 onClick={withdrawFromReserve}
+                                                 className="bg-red-100 text-red-600 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wide shadow-sm active:scale-95 flex items-center gap-1"
+                                             >
+                                                 <span>Cobrir</span>
+                                                 <i className="fa-solid fa-arrow-up text-[10px]"></i>
+                                             </button>
+                                         )}
                                     </div>
                                 </div>
+
+                                {/* Extrato - 30% */}
+                                <button 
+                                    onClick={() => setIsLogOpen(true)}
+                                    className="w-[30%] bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-sm flex flex-col items-center justify-center gap-1 active:scale-95 transition-transform"
+                                >
+                                    <i className="fa-solid fa-clipboard-list text-xl"></i>
+                                    <span className="text-xs uppercase font-bold tracking-wide">Extrato</span>
+                                </button>
                             </div>
+
                         </div>
                     </header>
                 </div>
 
                 <div className="max-w-7xl mx-auto px-4 pb-24">
                     <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden min-h-[40vh]">
-                        <div className="p-3 border-b border-slate-100 flex gap-2 sticky top-0 bg-white z-10">
+                        <div className="p-4 border-b border-slate-100 flex gap-3 sticky top-0 bg-white z-10">
                             <div className="relative flex-1">
                                 <i className="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
-                                <input type="text" placeholder="Buscar..." className="w-full pl-9 pr-4 py-2 bg-slate-100 border-none rounded-lg focus:ring-2 focus:ring-emerald-500/20 text-sm outline-none" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                                <input type="text" placeholder="Buscar..." className="w-full pl-10 pr-4 py-2.5 bg-slate-100 border-none rounded-lg focus:ring-2 focus:ring-emerald-500/20 text-sm outline-none" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
                             </div>
-                            <button type="button" onClick={openNewExpenseModal} className="flex items-center justify-center gap-2 bg-emerald-600 text-white px-3 py-2 rounded-lg font-bold shadow-sm active:scale-95 transition-transform text-sm">
+                            <button type="button" onClick={openNewExpenseModal} className="flex items-center justify-center gap-2 bg-emerald-600 text-white px-4 py-2.5 rounded-lg font-bold shadow-sm active:scale-95 transition-transform text-sm">
                                 <i className="fa-solid fa-plus"></i>
                                 <span className="hidden md:inline">Nova</span>
                             </button>
@@ -513,17 +521,17 @@
                         <div className="md:hidden divide-y divide-slate-100">
                             {filteredExpenses.length > 0 ? (
                                 filteredExpenses.map((expense) => (
-                                    <div key={expense.id} className="p-3.5 flex justify-between items-center gap-3 active:bg-slate-50 transition-colors" onClick={() => openEditExpenseModal(expense)}>
+                                    <div key={expense.id} className="p-4 flex justify-between items-center gap-3 active:bg-slate-50 transition-colors" onClick={() => openEditExpenseModal(expense)}>
                                         <div className="flex-1 min-w-0">
                                             <div className="flex justify-between items-start mb-1">
                                                 <span className="font-semibold text-slate-800 text-sm md:text-base line-clamp-1">{expense.description}</span>
                                                 <span className="font-bold text-slate-900 text-sm md:text-base whitespace-nowrap">{formatCurrency(expense.amount)}</span>
                                             </div>
                                             <div className="flex items-center gap-2">
-                                                <span className={`px-1.5 py-0.5 rounded border text-[9px] md:text-[10px] font-bold uppercase ${getTypeStyles(expense.type)}`}>{expense.type}</span>
+                                                <span className={`px-2 py-0.5 rounded border text-[9px] md:text-[10px] font-bold uppercase ${getTypeStyles(expense.type)}`}>{expense.type}</span>
                                                 <span className="text-slate-500 text-[10px] md:text-xs">{expense.category}</span>
                                                 {expense.type === 'Parcelado' && (
-                                                    <span className="text-purple-600 font-medium bg-purple-50 px-1.5 py-0.5 rounded text-[9px] md:text-[10px]">
+                                                    <span className="text-purple-600 font-medium bg-purple-50 px-2 py-0.5 rounded text-[9px] md:text-[10px]">
                                                         {expense.currentInstallment}/{expense.installments}
                                                     </span>
                                                 )}
@@ -532,7 +540,7 @@
                                         <button 
                                             type="button" 
                                             onClick={(e) => { e.stopPropagation(); promptDelete(expense); }} 
-                                            className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-red-500 active:bg-red-50 rounded-full"
+                                            className="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-red-500 active:bg-red-50 rounded-full"
                                         >
                                             <i className="fa-solid fa-trash text-sm"></i>
                                         </button>
@@ -743,7 +751,7 @@
                         <div className={`opacity-80 ${highlight ? 'text-emerald-600' : ''}`}>{icon}</div>
                     </div>
                     <div>
-                        <div className={`text-base md:text-2xl font-bold tracking-tight ${textColor || 'text-slate-800'}`}>{value}</div>
+                        <div className={`text-lg md:text-2xl font-bold tracking-tight ${textColor || 'text-slate-800'}`}>{value}</div>
                         {subtext && <div className="hidden md:block text-xs text-slate-400 mt-1">{subtext}</div>}
                     </div>
                 </div>
