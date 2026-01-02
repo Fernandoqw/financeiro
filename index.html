@@ -10,15 +10,10 @@
     
     <link rel="manifest" href="manifest.json">
     
-    <!-- 1. React -->
     <script crossorigin src="https://unpkg.com/react@18.2.0/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    
-    <!-- 2. Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-
-    <!-- 3. FontAwesome (Ícones da Internet) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <style>
@@ -42,12 +37,13 @@
         const types = ["Fixo", "Variável", "Parcelado"];
         const START_MONTH = "2026-01"; 
         
-        // Chaves v6
-        const STORAGE_KEY_EXPENSES = "gastos_app_expenses_v6";
-        const STORAGE_KEY_SALARIES = "gastos_app_salaries_v6";
-        const STORAGE_KEY_RESERVES = "gastos_app_reserves_v6";
-        const STORAGE_KEY_TRANSFERRED_RESERVES = "gastos_app_transferred_reserves_v6";
-        const STORAGE_KEY_WITHDRAWALS = "gastos_app_withdrawals_v6";
+        // Chaves v7
+        const STORAGE_KEY_EXPENSES = "gastos_app_expenses_v7";
+        const STORAGE_KEY_SALARIES = "gastos_app_salaries_v7";
+        const STORAGE_KEY_RESERVES = "gastos_app_reserves_v7";
+        const STORAGE_KEY_TRANSFERRED_RESERVES = "gastos_app_transferred_reserves_v7";
+        const STORAGE_KEY_WITHDRAWALS = "gastos_app_withdrawals_v7";
+        const STORAGE_KEY_LOGS = "gastos_app_logs_v7"; // Nova chave para logs
 
         const defaultData = [
             { id: 1, description: "Exemplo: Aluguel", category: "Moradia", type: "Fixo", amount: 0.00, month: START_MONTH, groupId: "default_rent_2026" },
@@ -57,43 +53,28 @@
             const [currentMonth, setCurrentMonth] = useState(START_MONTH);
             const [searchTerm, setSearchTerm] = useState("");
             const [isModalOpen, setIsModalOpen] = useState(false);
+            const [isLogOpen, setIsLogOpen] = useState(false); // Estado para modal de extrato
             const [editingExpense, setEditingExpense] = useState(null);
             const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: "", message: "", onConfirm: null });
 
             // --- CARREGAMENTO ---
             const [expenses, setExpenses] = useState(() => {
-                try {
-                    const saved = localStorage.getItem(STORAGE_KEY_EXPENSES);
-                    return saved ? JSON.parse(saved) : defaultData;
-                } catch { return defaultData; }
+                try { return JSON.parse(localStorage.getItem(STORAGE_KEY_EXPENSES)) || defaultData; } catch { return defaultData; }
             });
-
             const [salaries, setSalaries] = useState(() => {
-                try {
-                    const saved = localStorage.getItem(STORAGE_KEY_SALARIES);
-                    return saved ? JSON.parse(saved) : { [START_MONTH]: 5000.00 };
-                } catch { return { [START_MONTH]: 5000.00 }; }
+                try { return JSON.parse(localStorage.getItem(STORAGE_KEY_SALARIES)) || { [START_MONTH]: 5000.00 }; } catch { return { [START_MONTH]: 5000.00 }; }
             });
-
             const [reserves, setReserves] = useState(() => {
-                try {
-                    const saved = localStorage.getItem(STORAGE_KEY_RESERVES);
-                    return saved ? JSON.parse(saved) : {};
-                } catch { return {}; }
+                try { return JSON.parse(localStorage.getItem(STORAGE_KEY_RESERVES)) || {}; } catch { return {}; }
             });
-
             const [transferredReserves, setTransferredReserves] = useState(() => {
-                try {
-                    const saved = localStorage.getItem(STORAGE_KEY_TRANSFERRED_RESERVES);
-                    return saved ? JSON.parse(saved) : {};
-                } catch { return {}; }
+                try { return JSON.parse(localStorage.getItem(STORAGE_KEY_TRANSFERRED_RESERVES)) || {}; } catch { return {}; }
             });
-
             const [withdrawals, setWithdrawals] = useState(() => {
-                try {
-                    const saved = localStorage.getItem(STORAGE_KEY_WITHDRAWALS);
-                    return saved ? JSON.parse(saved) : {};
-                } catch { return {}; }
+                try { return JSON.parse(localStorage.getItem(STORAGE_KEY_WITHDRAWALS)) || {}; } catch { return {}; }
+            });
+            const [logs, setLogs] = useState(() => {
+                try { return JSON.parse(localStorage.getItem(STORAGE_KEY_LOGS)) || []; } catch { return []; }
             });
 
             // --- SALVAMENTO ---
@@ -102,10 +83,26 @@
             useEffect(() => { localStorage.setItem(STORAGE_KEY_RESERVES, JSON.stringify(reserves)); }, [reserves]);
             useEffect(() => { localStorage.setItem(STORAGE_KEY_TRANSFERRED_RESERVES, JSON.stringify(transferredReserves)); }, [transferredReserves]);
             useEffect(() => { localStorage.setItem(STORAGE_KEY_WITHDRAWALS, JSON.stringify(withdrawals)); }, [withdrawals]);
+            useEffect(() => { localStorage.setItem(STORAGE_KEY_LOGS, JSON.stringify(logs)); }, [logs]);
 
             const [formData, setFormData] = useState({
                 description: "", category: "Outros", type: "Variável", amount: "", installments: 12, currentInstallment: 1
             });
+
+            // --- FUNÇÃO DE LOG ---
+            const addLog = (message, value, type) => {
+                const newLog = {
+                    id: Date.now(),
+                    date: new Date().toISOString(),
+                    message,
+                    value,
+                    type // 'entry' (entrada na reserva), 'exit' (saída da reserva/cobrir), 'info'
+                };
+                setLogs(prev => [newLog, ...prev]);
+            };
+
+            const formatCurrency = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
+            const formatMonthDisplay = (m) => { if(!m) return ""; const d = new Date(m + "-01T00:00:00"); return d.toLocaleString('pt-BR', { month: 'long', year: 'numeric' }); };
 
             // --- CÁLCULOS ---
             const currentMonthSalary = salaries[currentMonth] || 0;
@@ -138,39 +135,52 @@
                 for (const m of validMonths) {
                     const monthSalary = salaries[m] || 0;
                     const monthExpenses = expenses.filter(e => e.month === m).reduce((acc, curr) => acc + Number(curr.amount), 0);
-                    accumulatedCashFlow += (monthSalary - monthExpenses);
+                    const monthTransferred = transferredReserves[m] || 0;
+                    const monthWithdrawal = withdrawals[m] || 0;
+                    
+                    accumulatedCashFlow += (monthSalary + monthWithdrawal - monthExpenses - monthTransferred);
                 }
-
-                const reserveAtPrevMonth = getEffectiveReserve(prevMonthStr);
-                return accumulatedCashFlow - reserveAtPrevMonth;
+                return accumulatedCashFlow;
             };
 
-            const previousBalance = calculatePreviousBalance();
-            const prevMonthDate = new Date(currentMonth + "-01T00:00:00");
-            prevMonthDate.setMonth(prevMonthDate.getMonth() - 1);
-            const y = prevMonthDate.getFullYear();
-            const mo = String(prevMonthDate.getMonth() + 1).padStart(2, '0');
-            const prevMonthStr = `${y}-${mo}`;
-            const reservePrev = getEffectiveReserve(prevMonthStr);
-            const reserveIncrease = Math.max(0, currentReserve - reservePrev);
-            const displayPreviousBalance = Math.max(0, previousBalance - reserveIncrease);
-            const reserveDecrease = Math.max(0, reservePrev - currentReserve);
-            const finalBalance = (currentMonthSalary - currentTotalExpenses) + reserveDecrease;
+            const previousBalanceCalc = calculatePreviousBalance();
+            const transferredThisMonth = transferredReserves[currentMonth] || 0;
+            const displayPreviousBalance = Math.max(0, previousBalanceCalc - transferredThisMonth);
+            const isBalanceFullyTransferred = previousBalanceCalc > 0 && Math.abs(previousBalanceCalc - transferredThisMonth) < 0.01;
+            
+            const finalBalance = (displayPreviousBalance + currentMonthSalary + withdrawalThisMonth) - currentTotalExpenses;
 
             // --- AÇÕES ---
             const addPreviousToReserve = () => {
                 if (displayPreviousBalance <= 0) return;
                 const newTotal = currentReserve + displayPreviousBalance;
                 setReserves(prev => ({ ...prev, [currentMonth]: newTotal }));
+                
+                const currentTransferred = transferredReserves[currentMonth] || 0;
+                setTransferredReserves(prev => ({ ...prev, [currentMonth]: currentTransferred + displayPreviousBalance }));
+                
+                // LOG
+                addLog(`Guardado na Reserva (${formatMonthDisplay(currentMonth)})`, displayPreviousBalance, 'entry');
             };
 
             const withdrawFromReserve = () => {
                 if (finalBalance >= 0) return;
                 const deficit = Math.abs(finalBalance);
+                
                 if (currentReserve <= 0) { alert("Reserva vazia!"); return; }
                 const amountToWithdraw = Math.min(deficit, currentReserve);
+                
                 const newTotal = currentReserve - amountToWithdraw;
                 setReserves(prev => ({ ...prev, [currentMonth]: newTotal }));
+
+                const currentWithdrawal = withdrawals[currentMonth] || 0;
+                setWithdrawals(prev => ({ 
+                    ...prev, 
+                    [currentMonth]: currentWithdrawal + amountToWithdraw 
+                }));
+
+                // LOG
+                addLog(`Cobertura de Saldo (${formatMonthDisplay(currentMonth)})`, amountToWithdraw, 'exit');
             };
 
             const handleSalaryChange = (val) => setSalaries(prev => ({ ...prev, [currentMonth]: Number(val) }));
@@ -193,6 +203,7 @@
                             });
                             return updated;
                         });
+                        addLog(`Salário refletido para futuros a partir de ${formatMonthDisplay(currentMonth)}`, newSalary, 'info');
                         setConfirmDialog(prev => ({ ...prev, isOpen: false }));
                     }
                 });
@@ -334,8 +345,6 @@
             };
 
             const handleDateInput = (e) => { if(e.target.value >= START_MONTH) setCurrentMonth(e.target.value); };
-            const formatMonthDisplay = (m) => { if(!m) return ""; const d = new Date(m + "-01T00:00:00"); return d.toLocaleString('pt-BR', { month: 'long', year: 'numeric' }); };
-            const formatCurrency = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
 
             const filteredExpenses = expenses.filter(e => e.month === currentMonth && (e.description.toLowerCase().includes(searchTerm.toLowerCase()) || e.category.toLowerCase().includes(searchTerm.toLowerCase())));
             const isStartMonth = currentMonth === START_MONTH;
@@ -353,19 +362,25 @@
                                 </div>
                                 <h1 className="text-xl font-bold text-slate-900">Controle</h1>
                             </div>
-                            <div className="flex items-center bg-white rounded-full shadow-sm border border-slate-200 pl-2 pr-3 py-1.5">
-                                <button type="button" onClick={() => handleMonthChange(-1)} disabled={isStartMonth} className={`p-1.5 rounded-full ${isStartMonth ? 'text-slate-300' : 'text-slate-500 active:bg-slate-100'}`}>
-                                    <i className="fa-solid fa-chevron-left text-sm"></i>
+                            <div className="flex items-center gap-2">
+                                <button onClick={() => setIsLogOpen(true)} className="w-9 h-9 rounded-full bg-white shadow-sm border border-slate-200 text-slate-600 flex items-center justify-center hover:bg-slate-50 transition-colors">
+                                    <i className="fa-solid fa-clipboard-list"></i>
                                 </button>
-                                <div className="relative mx-1">
-                                    <span className="text-sm font-bold text-slate-700 select-none block text-center min-w-[140px] capitalize">
-                                        {formatMonthDisplay(currentMonth)}
-                                    </span>
-                                    <input type="month" min={START_MONTH} value={currentMonth} onChange={handleDateInput} className="absolute inset-0 opacity-0 w-full h-full" />
+
+                                <div className="flex items-center bg-white rounded-full shadow-sm border border-slate-200 pl-2 pr-3 py-1.5">
+                                    <button type="button" onClick={() => handleMonthChange(-1)} disabled={isStartMonth} className={`p-1.5 rounded-full ${isStartMonth ? 'text-slate-300' : 'text-slate-500 active:bg-slate-100'}`}>
+                                        <i className="fa-solid fa-chevron-left text-sm"></i>
+                                    </button>
+                                    <div className="relative mx-1">
+                                        <span className="text-sm font-bold text-slate-700 select-none block text-center min-w-[140px] capitalize">
+                                            {formatMonthDisplay(currentMonth)}
+                                        </span>
+                                        <input type="month" min={START_MONTH} value={currentMonth} onChange={handleDateInput} className="absolute inset-0 opacity-0 w-full h-full" />
+                                    </div>
+                                    <button type="button" onClick={() => handleMonthChange(1)} className="p-1.5 rounded-full text-slate-500 active:bg-slate-100">
+                                        <i className="fa-solid fa-chevron-right text-sm"></i>
+                                    </button>
                                 </div>
-                                <button type="button" onClick={() => handleMonthChange(1)} className="p-1.5 rounded-full text-slate-500 active:bg-slate-100">
-                                    <i className="fa-solid fa-chevron-right text-sm"></i>
-                                </button>
                             </div>
                         </div>
 
@@ -431,7 +446,7 @@
                                             placeholder="0"
                                         />
                                     </div>
-                                    {displayPreviousBalance > 0 && (
+                                    {displayPreviousBalance > 0 && !isBalanceFullyTransferred && (
                                         <button 
                                             type="button"
                                             onClick={addPreviousToReserve}
@@ -645,6 +660,61 @@
                             <div className="flex gap-3 mt-4">
                                 <button onClick={() => setConfirmDialog({...confirmDialog, isOpen: false})} className="flex-1 py-3 rounded-xl bg-slate-100 font-bold text-slate-600 hover:bg-slate-200 transition-colors">Cancelar</button>
                                 <button onClick={confirmDialog.onConfirm} className="flex-1 py-3 rounded-xl bg-red-600 font-bold text-white shadow-lg hover:bg-red-700 transition-colors">Confirmar</button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+                
+                {/* MODAL DE EXTRATO (LOGS) */}
+                {isLogOpen && (
+                    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in">
+                        <div className="bg-white w-full max-w-md rounded-2xl shadow-xl overflow-hidden flex flex-col max-h-[80vh] animate-slide-up">
+                            <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                                <div className="flex items-center gap-2">
+                                    <div className="bg-blue-100 p-2 rounded-lg text-blue-600"><i className="fa-solid fa-list"></i></div>
+                                    <h2 className="font-bold text-lg text-slate-800">Extrato de Atividades</h2>
+                                </div>
+                                <button type="button" onClick={() => setIsLogOpen(false)} className="w-8 h-8 flex items-center justify-center bg-white rounded-full text-slate-400 hover:text-slate-600 shadow-sm"><i className="fa-solid fa-xmark"></i></button>
+                            </div>
+                            
+                            <div className="p-0 overflow-y-auto bg-slate-50">
+                                {logs.length > 0 ? (
+                                    <div className="divide-y divide-slate-100">
+                                        {logs.map((log) => (
+                                            <div key={log.id} className="p-4 bg-white flex gap-3">
+                                                <div className={`mt-1 w-2 h-2 rounded-full flex-shrink-0 ${
+                                                    log.type === 'entry' ? 'bg-emerald-500' : 
+                                                    log.type === 'exit' ? 'bg-red-500' : 'bg-blue-500'
+                                                }`}></div>
+                                                <div className="flex-1">
+                                                    <p className="text-sm font-medium text-slate-800">{log.message}</p>
+                                                    <div className="flex justify-between items-center mt-1">
+                                                        <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">
+                                                            {new Date(log.date).toLocaleString('pt-BR')}
+                                                        </span>
+                                                        {log.value > 0 && (
+                                                            <span className={`text-xs font-bold ${
+                                                                log.type === 'entry' ? 'text-emerald-600' : 
+                                                                log.type === 'exit' ? 'text-red-600' : 'text-blue-600'
+                                                            }`}>
+                                                                {log.type === 'exit' ? '-' : '+'} {formatCurrency(log.value)}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="p-10 text-center text-slate-400 text-sm flex flex-col items-center gap-2">
+                                        <i className="fa-regular fa-clipboard text-2xl opacity-50"></i>
+                                        <span>Nenhuma atividade registrada.</span>
+                                    </div>
+                                )}
+                            </div>
+                            
+                            <div className="p-3 bg-white border-t border-slate-100 text-center">
+                                <button onClick={() => { if(confirm('Limpar todo o histórico?')) setLogs([]); }} className="text-xs text-red-400 hover:text-red-600 font-medium">Limpar Histórico</button>
                             </div>
                         </div>
                     </div>
